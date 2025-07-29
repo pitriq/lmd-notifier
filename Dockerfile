@@ -22,6 +22,7 @@ RUN apt-get update && apt-get install -y \
     libu2f-udev \
     libxshmfence1 \
     libglu1-mesa \
+    unzip \
     && rm -rf /var/lib/apt/lists/*
 
 RUN wget -q -O chrome-linux64.zip https://storage.googleapis.com/chrome-for-testing-public/138.0.7204.168/linux64/chrome-linux64.zip \
