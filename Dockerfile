@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   libu2f-udev \
   libxshmfence1 \
   libglu1-mesa \
-  chromium-browser \
+  chromium \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
