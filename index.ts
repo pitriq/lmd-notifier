@@ -87,9 +87,21 @@ async function checkAppointments(): Promise<boolean> {
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-gpu',
+        '--disable-web-security',
+        '--disable-features=VizDisplayCompositor',
+        '--no-zygote',
+        '--single-process',
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding',
+        '--disable-features=TranslateUI',
+        '--disable-ipc-flooding-protection',
+        '--memory-pressure-off',
+        '--max-old-space-size=2048',
         '--incognito',
       ],
       protocolTimeout: Number(PAGE_TIMEOUT_MS),
+      timeout: Number(PAGE_TIMEOUT_MS),
     });
     console.log('Browser launched successfully');
   } catch (error) {

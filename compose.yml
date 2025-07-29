@@ -6,6 +6,12 @@ services:
       - PAGE_TIMEOUT_MS=60000
       - HEADLESS=true
     restart: unless-stopped
-    shm_size: 2gb
+    shm_size: 1gb
     security_opt:
-      - seccomp:unconfined 
+      - seccomp:unconfined
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+        reservations:
+          memory: 512M 
