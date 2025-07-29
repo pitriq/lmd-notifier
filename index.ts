@@ -7,6 +7,7 @@ const {
   SCRAPE_INTERVAL_MINUTES = '10',
   PAGE_TIMEOUT_MS = '60000',
   HEADLESS = 'true',
+  PUPPETEER_EXECUTABLE_PATH = '/usr/bin/google-chrome',
 } = process.env;
 
 if (!TELEGRAM_BOT_TOKEN || !USERS_JSON) {
@@ -82,36 +83,15 @@ async function checkAppointments(): Promise<boolean> {
   try {
     browser = await puppeteer.launch({
       headless: HEADLESS === 'true',
+      executablePath: PUPPETEER_EXECUTABLE_PATH,
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
-        '--disable-accelerated-2d-canvas',
-        '--no-first-run',
-        '--no-zygote',
-        '--single-process',
         '--disable-gpu',
-        '--disable-background-timer-throttling',
-        '--disable-backgrounding-occluded-windows',
-        '--disable-renderer-backgrounding',
-        '--disable-web-security',
-        '--disable-features=VizDisplayCompositor',
-        '--disable-extensions',
-        '--disable-plugins',
-        '--disable-sync',
-        '--disable-translate',
-        '--disable-default-apps',
-        '--no-default-browser-check',
-        '--disable-hang-monitor',
-        '--disable-prompt-on-repost',
-        '--disable-client-side-phishing-detection',
-        '--disable-component-update',
-        '--memory-pressure-off',
-        '--max-old-space-size=4096',
         '--incognito',
       ],
       protocolTimeout: Number(PAGE_TIMEOUT_MS),
-      ignoreDefaultArgs: ['--disable-extensions'],
     });
     console.log('Browser launched successfully');
   } catch (error) {
