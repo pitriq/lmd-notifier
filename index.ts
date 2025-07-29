@@ -7,7 +7,7 @@ const {
   SCRAPE_INTERVAL_MINUTES = '10',
   PAGE_TIMEOUT_MS = '60000',
   HEADLESS = 'true',
-  PUPPETEER_EXECUTABLE_PATH = '/usr/bin/google-chrome',
+  PUPPETEER_EXECUTABLE_PATH = '/usr/bin/google-chrome-stable',
 } = process.env;
 
 if (!TELEGRAM_BOT_TOKEN || !USERS_JSON) {
