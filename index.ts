@@ -7,7 +7,6 @@ const {
   SCRAPE_INTERVAL_MINUTES = '10',
   PAGE_TIMEOUT_MS = '60000',
   HEADLESS = 'true',
-  PUPPETEER_EXECUTABLE_PATH = '/usr/bin/chromium-browser',
 } = process.env;
 
 if (!TELEGRAM_BOT_TOKEN || !USERS_JSON) {
@@ -79,7 +78,6 @@ async function checkAppointments(): Promise<boolean> {
   console.log('Starting appointment check...');
 
   const browser = await puppeteer.launch({
-    executablePath: PUPPETEER_EXECUTABLE_PATH,
     headless: HEADLESS === 'true',
     args: ['--incognito', '--no-sandbox', '--disable-setuid-sandbox'],
     protocolTimeout: Number(PAGE_TIMEOUT_MS),

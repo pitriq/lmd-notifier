@@ -1,21 +1,17 @@
 {
   "name": "lmd-notifier",
-  "module": "index.ts",
+  "main": "index.ts",
   "devDependencies": {
-    "@types/bun": "latest",
-    "@types/node": "latest"
-  },
-  "peerDependencies": {
-    "typescript": "^5"
+    "@types/node": "latest",
+    "tsx": "^4.0.0"
   },
   "private": true,
   "scripts": {
-    "start": "bun run index.ts",
-    "dev": "export $(awk '/environment:/,/^[^ ]/ {if ($0 ~ /^[ ]*-/) {print $0}}' compose.override.yml | sed 's/- //g' | sed 's/^[[:space:]]*//g' | sed 's/: /=/g' | xargs) && bun --watch run index.ts"
+    "start": "tsx index.ts",
+    "dev": "export $(awk '/environment:/,/^[^ ]/ {if ($0 ~ /^[ ]*-/) {print $0}}' compose.override.yml | sed 's/- //g' | sed 's/^[[:space:]]*//g' | sed 's/: /=/g' | xargs) && tsx --watch index.ts"
   },
-  "trustedDependencies": ["puppeteer"],
   "type": "module",
   "dependencies": {
-    "puppeteer": "^24.8.1"
+    "puppeteer": "^24.15.0"
   }
 }
