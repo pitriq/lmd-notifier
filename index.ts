@@ -78,26 +78,18 @@ async function checkAppointments(): Promise<boolean> {
   console.log('Starting appointment check...');
 
   console.log('Launching browser...');
+  
   let browser;
   try {
     browser = await puppeteer.launch({
       headless: HEADLESS === 'true',
       args: [
         '--no-sandbox',
-        '--disable-setuid-sandbox',
+        '--disable-setuid-sandbox', 
         '--disable-dev-shm-usage',
         '--disable-gpu',
-        '--disable-web-security',
-        '--disable-features=VizDisplayCompositor',
-        '--no-zygote',
-        '--single-process',
-        '--disable-background-timer-throttling',
-        '--disable-backgrounding-occluded-windows',
-        '--disable-renderer-backgrounding',
-        '--disable-features=TranslateUI',
-        '--disable-ipc-flooding-protection',
-        '--memory-pressure-off',
-        '--max-old-space-size=2048',
+        '--disable-extensions',
+        '--disable-software-rasterizer',
         '--incognito',
       ],
       protocolTimeout: Number(PAGE_TIMEOUT_MS),
