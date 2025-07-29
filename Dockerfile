@@ -19,7 +19,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   libu2f-udev \
   libxshmfence1 \
   libglu1-mesa \
-  chromium \
+  chromium-browser \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/*
 
@@ -31,9 +31,6 @@ RUN bun install
 
 # Copy source code
 COPY . .
-
-ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
-ENV PUPPETEER_EXECUTABLE_PATH="/usr/bin/chromium"
 
 # Run the application
 CMD ["bun", "run", "start"] 
