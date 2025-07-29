@@ -24,7 +24,7 @@ RUN apt-get update && sudo apt install -y \
     libatk1.0-0 \
     libcairo-gobject2 \
     libgtk-3-0 \
-    libgdk-pixbuf2.0-0
+    libgdk-pixbuf2.0-0 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
