@@ -1,14 +1,9 @@
 FROM oven/bun:1
 
-# Install Chrome
 RUN apt-get update && apt-get install -y \
     wget \
     gnupg \
-    && wget -q -O - https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/googlechrome-linux-keyring.gpg \
-    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/googlechrome-linux-keyring.gpg] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google-chrome.list \
-    && apt-get update \
-    && apt-get install -y --no-install-recommends \
-    google-chrome-stable \
+    ca-certificates \
     fonts-liberation \
     libasound2 \
     libatk-bridge2.0-0 \
@@ -27,11 +22,13 @@ RUN apt-get update && apt-get install -y \
     libu2f-udev \
     libxshmfence1 \
     libglu1-mesa \
-    && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
-# Create a symlink to ensure the executable is found
-RUN ln -sf /usr/bin/google-chrome /usr/bin/google-chrome-stable
+RUN wget -q -O chrome-linux64.zip https://storage.googleapis.com/chrome-for-testing-public/138.0.7204.168/linux64/chrome-linux64.zip \
+    && unzip chrome-linux64.zip \
+    && mv chrome-linux64 /opt/chrome \
+    && ln -sf /opt/chrome/chrome /usr/bin/google-chrome \
+    && rm chrome-linux64.zip
 
 WORKDIR /app
 
