@@ -5,4 +5,7 @@ services:
       - SCRAPE_INTERVAL_MINUTES=10
       - PAGE_TIMEOUT_MS=60000
       - HEADLESS=true
-    restart: unless-stopped 
+    restart: unless-stopped
+    shm_size: 2gb
+    security_opt:
+      - seccomp:unconfined 

@@ -78,25 +78,46 @@ async function checkAppointments(): Promise<boolean> {
   console.log('Starting appointment check...');
 
   console.log('Launching browser...');
-  const browser = await puppeteer.launch({
-    headless: HEADLESS === 'true',
-    args: [
-      '--no-sandbox',
-      '--disable-setuid-sandbox',
-      '--disable-dev-shm-usage',
-      '--disable-accelerated-2d-canvas',
-      '--no-first-run',
-      '--no-zygote',
-      '--single-process',
-      '--disable-gpu',
-      '--disable-background-timer-throttling',
-      '--disable-backgrounding-occluded-windows',
-      '--disable-renderer-backgrounding',
-      '--incognito'
-    ],
-    protocolTimeout: Number(PAGE_TIMEOUT_MS),
-  });
-  console.log('Browser launched successfully');
+  let browser;
+  try {
+    browser = await puppeteer.launch({
+      headless: HEADLESS === 'true',
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--single-process',
+        '--disable-gpu',
+        '--disable-background-timer-throttling',
+        '--disable-backgrounding-occluded-windows',
+        '--disable-renderer-backgrounding',
+        '--disable-web-security',
+        '--disable-features=VizDisplayCompositor',
+        '--disable-extensions',
+        '--disable-plugins',
+        '--disable-sync',
+        '--disable-translate',
+        '--disable-default-apps',
+        '--no-default-browser-check',
+        '--disable-hang-monitor',
+        '--disable-prompt-on-repost',
+        '--disable-client-side-phishing-detection',
+        '--disable-component-update',
+        '--memory-pressure-off',
+        '--max-old-space-size=4096',
+        '--incognito',
+      ],
+      protocolTimeout: Number(PAGE_TIMEOUT_MS),
+      ignoreDefaultArgs: ['--disable-extensions'],
+    });
+    console.log('Browser launched successfully');
+  } catch (error) {
+    console.error('Failed to launch browser:', error);
+    throw error;
+  }
 
   try {
     console.log('Getting page...');
@@ -128,7 +149,10 @@ async function checkAppointments(): Promise<boolean> {
     });
 
     console.log(`Navigating to ${EMBASSY_URL}`);
-    await page.goto(EMBASSY_URL, { waitUntil: 'networkidle0', timeout: Number(PAGE_TIMEOUT_MS) });
+    await page.goto(EMBASSY_URL, {
+      waitUntil: 'networkidle0',
+      timeout: Number(PAGE_TIMEOUT_MS),
+    });
     console.log('Page navigation completed');
 
     console.log('Waiting for captcha button...');
