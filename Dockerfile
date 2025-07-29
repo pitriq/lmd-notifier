@@ -25,6 +25,8 @@ RUN apt-get update && apt-get install -y \
     libcairo-gobject2 \
     libgtk-3-0 \
     libgdk-pixbuf2.0-0 \
+    libcurl4 \
+    libvulkan1 \
     && rm -rf /var/lib/apt/lists/*
 
 RUN wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.deb \
