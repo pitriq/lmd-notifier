@@ -77,25 +77,31 @@ async function sendTelegramNotification(message: string, chatId: string) {
 async function checkAppointments(): Promise<boolean> {
   console.log('Starting appointment check...');
 
+  console.log('Launching browser...');
   const browser = await puppeteer.launch({
     headless: HEADLESS === 'true',
     args: ['--incognito', '--no-sandbox', '--disable-setuid-sandbox'],
     protocolTimeout: Number(PAGE_TIMEOUT_MS),
   });
+  console.log('Browser launched successfully');
 
   try {
+    console.log('Getting page...');
     const page = (await browser.pages())[0]!;
     await page.setDefaultNavigationTimeout(Number(PAGE_TIMEOUT_MS));
     await page.setDefaultTimeout(Number(PAGE_TIMEOUT_MS));
+    console.log('Page configured with timeouts');
 
     const userAgent = getRandomUserAgent();
     console.log('Using User-Agent:', userAgent);
     await page.setUserAgent(userAgent);
 
+    console.log('Setting extra headers...');
     await page.setExtraHTTPHeaders({
       referer: 'https://www.citaconsular.es/',
     });
 
+    console.log('Setting up dialog handler...');
     page.on('dialog', async (dialog) => {
       console.log('Dialog type:', dialog.type());
       console.log('Dialog message:', dialog.message());
@@ -109,7 +115,8 @@ async function checkAppointments(): Promise<boolean> {
     });
 
     console.log(`Navigating to ${EMBASSY_URL}`);
-    await page.goto(EMBASSY_URL);
+    await page.goto(EMBASSY_URL, { waitUntil: 'networkidle0', timeout: Number(PAGE_TIMEOUT_MS) });
+    console.log('Page navigation completed');
 
     console.log('Waiting for captcha button...');
     await page.waitForSelector('#idCaptchaButton', { visible: true });
