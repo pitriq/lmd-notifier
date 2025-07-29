@@ -1,0 +1,10 @@
+version: '3.8'
+
+services:
+  notifier:
+    build: .
+    environment:
+      - SCRAPE_INTERVAL_MINUTES=10
+      - PAGE_TIMEOUT_MS=30000
+      - HEADLESS=true
+    restart: unless-stopped 
