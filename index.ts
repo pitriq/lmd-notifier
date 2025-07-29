@@ -184,18 +184,75 @@ async function notifyAllUsers() {
   console.log('Notifications sent to all users.');
 }
 
+async function notifyStartup() {
+  console.log(`Sending startup notifications to ${users.length} users...`);
+
+  await Promise.allSettled(
+    users.map((user) =>
+      sendTelegramNotification(
+        [
+          '🤖 LMD Notifier is now running!',
+          `Monitoring appointment slots every ${SCRAPE_INTERVAL_MINUTES} minutes.`,
+          'You will be notified when LEY MEMORIA DEMOCRATICA appointments become available.',
+        ].join('\n\n'),
+        user.telegram_user_id,
+      ),
+    ),
+  );
+
+  console.log('Startup notifications sent to all users.');
+}
+
+async function notifyError(error: string) {
+  console.log(`Sending error notifications to ${users.length} users...`);
+
+  await Promise.allSettled(
+    users.map((user) =>
+      sendTelegramNotification(
+        [
+          '⚠️ LMD Notifier encountered an error',
+          `Error: ${error}`,
+          'The notifier will continue trying to monitor appointments.',
+        ].join('\n\n'),
+        user.telegram_user_id,
+      ),
+    ),
+  );
+
+  console.log('Error notifications sent to all users.');
+}
+
 async function main() {
   console.log(`Starting monitoring for ${users.length} users...`);
+  
+  // Send startup notification to all users
+  await notifyStartup();
 
   while (true) {
-    const appointmentsAvailable = await checkAppointments();
-    if (appointmentsAvailable) await notifyAllUsers();
-    const interval = Number(SCRAPE_INTERVAL_MINUTES) * 60 * 1000;
-    console.log(
-      `Waiting ${SCRAPE_INTERVAL_MINUTES} minutes before next check...`,
-    );
-    await new Promise((resolve) => setTimeout(resolve, interval));
+    try {
+      const appointmentsAvailable = await checkAppointments();
+      if (appointmentsAvailable) await notifyAllUsers();
+      const interval = Number(SCRAPE_INTERVAL_MINUTES) * 60 * 1000;
+      console.log(
+        `Waiting ${SCRAPE_INTERVAL_MINUTES} minutes before next check...`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, interval));
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Error in main loop:', error);
+      await notifyError(errorMessage);
+      
+      // Wait a bit before retrying to avoid rapid error loops
+      const retryDelay = 60000; // 1 minute
+      console.log('Waiting 1 minute before retrying...');
+      await new Promise((resolve) => setTimeout(resolve, retryDelay));
+    }
   }
 }
 
-main().catch(console.error);
+main().catch(async (error) => {
+  console.error('Critical error in main function:', error);
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  await notifyError(`Critical error: ${errorMessage}`);
+  process.exit(1);
+});
