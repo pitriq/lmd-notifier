@@ -1,5 +1,7 @@
 import puppeteer from 'puppeteer';
 
+
+
 const {
   TELEGRAM_BOT_TOKEN,
   USERS_JSON,
@@ -40,6 +42,17 @@ try {
   throw new Error(`Invalid USERS_JSON format: ${error}`);
 }
 
+function log(message: string) {
+  const timestamp = new Date().toISOString();
+  console.log(`[${timestamp}] ${message}`);
+}
+
+function logError(message: string, error?: any) {
+  const timestamp = new Date().toISOString();
+  const errorText = error ? `: ${error}` : '';
+  console.error(`[${timestamp}] ${message}${errorText}`);
+}
+
 const USER_AGENTS = [
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
@@ -76,9 +89,9 @@ async function sendTelegramNotification(message: string, chatId: string) {
 }
 
 async function checkAppointments(): Promise<boolean> {
-  console.log('Starting appointment check...');
+  log('Starting appointment check...');
 
-  console.log('Launching browser...');
+  log('Launching browser...');
   
   let browser;
   try {
@@ -97,53 +110,53 @@ async function checkAppointments(): Promise<boolean> {
       protocolTimeout: Number(PAGE_TIMEOUT_MS),
       timeout: Number(PAGE_TIMEOUT_MS),
     });
-    console.log('Browser launched successfully');
+    log('Browser launched successfully');
   } catch (error) {
-    console.error('Failed to launch browser:', error);
+          logError(`Failed to launch browser: ${error}`);
     throw error;
   }
 
   try {
-    console.log('Getting page...');
+    log('Getting page...');
     const page = (await browser.pages())[0]!;
     await page.setDefaultNavigationTimeout(Number(PAGE_TIMEOUT_MS));
     await page.setDefaultTimeout(Number(PAGE_TIMEOUT_MS));
-    console.log('Page configured with timeouts');
+    log('Page configured with timeouts');
 
     const userAgent = getRandomUserAgent();
-    console.log('Using User-Agent:', userAgent);
+    log(`Using User-Agent: ${userAgent}`);
     await page.setUserAgent(userAgent);
 
-    console.log('Setting extra headers...');
+    log('Setting extra headers...');
     await page.setExtraHTTPHeaders({
       referer: 'https://www.citaconsular.es/',
     });
 
-    console.log('Setting up dialog handler...');
+    log('Setting up dialog handler...');
     page.on('dialog', async (dialog) => {
-      console.log('Dialog type:', dialog.type());
-      console.log('Dialog message:', dialog.message());
+      log(`Dialog type: ${dialog.type()}`);
+      log(`Dialog message: ${dialog.message()}`);
       await new Promise((resolve) => setTimeout(resolve, 1000));
       try {
         await dialog.accept();
-        console.log('Dialog accepted successfully');
+        log('Dialog accepted successfully');
       } catch (error) {
-        console.error('Error accepting dialog:', error);
+        logError('Error accepting dialog:', error);
       }
     });
 
-    console.log(`Navigating to ${EMBASSY_URL}`);
+    log(`Navigating to ${EMBASSY_URL}`);
     await page.goto(EMBASSY_URL, {
       waitUntil: 'networkidle0',
       timeout: Number(PAGE_TIMEOUT_MS),
     });
-    console.log('Page navigation completed');
+    log('Page navigation completed');
 
-    console.log('Waiting for captcha button...');
+    log('Waiting for captcha button...');
     await page.waitForSelector('#idCaptchaButton', { visible: true });
     await page.click('#idCaptchaButton');
 
-    console.log('Waiting for services list...');
+    log('Waiting for services list...');
     await page.waitForSelector('#idListServices');
     const servicesText = await page.$eval(
       '#idListServices',
@@ -151,14 +164,14 @@ async function checkAppointments(): Promise<boolean> {
     );
 
     if (servicesText.includes('LEY MEMORIA')) {
-      console.log('Appointment slots found!');
+      log('Appointment slots found!');
       return true;
     } else {
-      console.log('No appointment slots available.');
+      log('No appointment slots available.');
       return false;
     }
   } catch (error) {
-    console.error('Error during scraping:', error);
+    logError('Error during scraping:', error);
     return false;
   } finally {
     await browser.close();
@@ -166,7 +179,7 @@ async function checkAppointments(): Promise<boolean> {
 }
 
 async function notifyAllUsers() {
-  console.log(`Sending notifications to ${users.length} users...`);
+  log(`Sending notifications to ${users.length} users...`);
 
   await Promise.allSettled(
     users.map((user) =>
@@ -181,11 +194,11 @@ async function notifyAllUsers() {
     ),
   );
 
-  console.log('Notifications sent to all users.');
+  log('Notifications sent to all users.');
 }
 
 async function notifyStartup() {
-  console.log(`Sending startup notifications to ${users.length} users...`);
+  log(`Sending startup notifications to ${users.length} users...`);
 
   await Promise.allSettled(
     users.map((user) =>
@@ -200,11 +213,11 @@ async function notifyStartup() {
     ),
   );
 
-  console.log('Startup notifications sent to all users.');
+  log('Startup notifications sent to all users.');
 }
 
 async function notifyError(error: string) {
-  console.log(`Sending error notifications to ${users.length} users...`);
+  log(`Sending error notifications to ${users.length} users...`);
 
   await Promise.allSettled(
     users.map((user) =>
@@ -219,11 +232,19 @@ async function notifyError(error: string) {
     ),
   );
 
-  console.log('Error notifications sent to all users.');
+  log('Error notifications sent to all users.');
+}
+
+function getRandomizedInterval(): number {
+  const baseInterval = Number(SCRAPE_INTERVAL_MINUTES) * 60 * 1000;
+  // Add random variation of ±20% to the base interval
+  const variation = baseInterval * 0.2;
+  const randomOffset = (Math.random() - 0.5) * 2 * variation;
+  return Math.round(baseInterval + randomOffset);
 }
 
 async function main() {
-  console.log(`Starting monitoring for ${users.length} users...`);
+  log(`Starting monitoring for ${users.length} users...`);
   
   // Send startup notification to all users
   await notifyStartup();
@@ -232,26 +253,26 @@ async function main() {
     try {
       const appointmentsAvailable = await checkAppointments();
       if (appointmentsAvailable) await notifyAllUsers();
-      const interval = Number(SCRAPE_INTERVAL_MINUTES) * 60 * 1000;
-      console.log(
-        `Waiting ${SCRAPE_INTERVAL_MINUTES} minutes before next check...`,
+      const interval = getRandomizedInterval();
+      log(
+        `Waiting ${Math.round(interval / 60000)} minutes before next check...`,
       );
       await new Promise((resolve) => setTimeout(resolve, interval));
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      console.error('Error in main loop:', error);
+      logError('Error in main loop:', error);
       await notifyError(errorMessage);
       
       // Wait a bit before retrying to avoid rapid error loops
       const retryDelay = 60000; // 1 minute
-      console.log('Waiting 1 minute before retrying...');
+      log('Waiting 1 minute before retrying...');
       await new Promise((resolve) => setTimeout(resolve, retryDelay));
     }
   }
 }
 
 main().catch(async (error) => {
-  console.error('Critical error in main function:', error);
+  logError('Critical error in main function:', error);
   const errorMessage = error instanceof Error ? error.message : String(error);
   await notifyError(`Critical error: ${errorMessage}`);
   process.exit(1);

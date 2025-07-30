@@ -2,7 +2,7 @@ services:
   notifier:
     build: .
     environment:
-      - SCRAPE_INTERVAL_MINUTES=10
+      - SCRAPE_INTERVAL_MINUTES=12
       - PAGE_TIMEOUT_MS=60000
       - HEADLESS=true
       - PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true
