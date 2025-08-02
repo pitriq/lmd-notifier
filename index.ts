@@ -1,5 +1,8 @@
 import puppeteer from 'puppeteer';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 
+const execAsync = promisify(exec);
 
 
 const {
@@ -64,6 +67,31 @@ const USER_AGENTS = [
 
 function getRandomUserAgent() {
   return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)]!;
+}
+
+async function killDanglingChromeProcesses() {
+  try {
+    log('Checking for dangling Chrome processes...');
+    
+    // Kill Chrome processes
+    const chromeCommands = [
+      'pkill -f chromium-browser',
+      'pkill -f chrome',
+      'pkill -f google-chrome',
+    ];
+    
+    for (const cmd of chromeCommands) {
+      try {
+        await execAsync(cmd);
+      } catch (error) {
+        // pkill returns exit code 1 if no processes found, which is normal
+      }
+    }
+    
+    log('Chrome process cleanup completed');
+  } catch (error) {
+    logError('Error during Chrome process cleanup:', error);
+  }
 }
 
 async function sendTelegramNotification(message: string, chatId: string) {
@@ -246,6 +274,9 @@ function getRandomizedInterval(): number {
 async function main() {
   log(`Starting monitoring for ${users.length} users...`);
   
+  // Clean up any dangling Chrome processes from previous runs
+  await killDanglingChromeProcesses();
+  
   // Send startup notification to all users
   await notifyStartup();
 
@@ -253,21 +284,22 @@ async function main() {
     try {
       const appointmentsAvailable = await checkAppointments();
       if (appointmentsAvailable) await notifyAllUsers();
-      const interval = getRandomizedInterval();
-      log(
-        `Waiting ${Math.round(interval / 60000)} minutes before next check...`,
-      );
-      await new Promise((resolve) => setTimeout(resolve, interval));
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       logError('Error in main loop:', error);
-      await notifyError(errorMessage);
       
-      // Wait a bit before retrying to avoid rapid error loops
-      const retryDelay = 60000; // 1 minute
-      log('Waiting 1 minute before retrying...');
-      await new Promise((resolve) => setTimeout(resolve, retryDelay));
+      // Clean up any dangling Chrome processes after failure
+      await killDanglingChromeProcesses();
+      
+      await notifyError(errorMessage);
     }
+    
+    // Always wait for a randomized interval before the next check
+    const interval = getRandomizedInterval();
+    log(
+      `Waiting ${Math.round(interval / 60000)} minutes before next check...`,
+    );
+    await new Promise((resolve) => setTimeout(resolve, interval));
   }
 }
 
