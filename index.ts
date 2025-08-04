@@ -42,7 +42,8 @@ try {
     }
   }
 } catch (error) {
-  throw new Error(`Invalid USERS_JSON format: ${error}`);
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  throw new Error(`Invalid USERS_JSON format: ${errorMessage}`);
 }
 
 function log(message: string) {
@@ -85,12 +86,14 @@ async function killDanglingChromeProcesses() {
         await execAsync(cmd);
       } catch (error) {
         // pkill returns exit code 1 if no processes found, which is normal
+        // Error: ${error instanceof Error ? error.message : String(error)}
       }
     }
     
     log('Chrome process cleanup completed');
   } catch (error) {
-    logError('Error during Chrome process cleanup:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logError('Error during Chrome process cleanup:', errorMessage);
   }
 }
 
@@ -140,7 +143,8 @@ async function checkAppointments(): Promise<boolean> {
     });
     log('Browser launched successfully');
   } catch (error) {
-          logError(`Failed to launch browser: ${error}`);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logError(`Failed to launch browser: ${errorMessage}`);
     throw error;
   }
 
@@ -169,7 +173,8 @@ async function checkAppointments(): Promise<boolean> {
         await dialog.accept();
         log('Dialog accepted successfully');
       } catch (error) {
-        logError('Error accepting dialog:', error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        logError('Error accepting dialog:', errorMessage);
       }
     });
 
@@ -199,7 +204,8 @@ async function checkAppointments(): Promise<boolean> {
       return false;
     }
   } catch (error) {
-    logError('Error during scraping:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logError('Error during scraping:', errorMessage);
     return false;
   } finally {
     await browser.close();
