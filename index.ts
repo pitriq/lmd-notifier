@@ -53,7 +53,26 @@ function log(message: string) {
 
 function logError(message: string, error?: any) {
   const timestamp = new Date().toISOString();
-  const errorText = error ? `: ${error}` : '';
+  let errorText = '';
+  
+  if (error) {
+    if (error instanceof Error) {
+      errorText = `: ${error.message}`;
+      // Also log the stack trace for debugging
+      if (error.stack) {
+        console.error(`[${timestamp}] Stack trace:`, error.stack);
+      }
+    } else if (typeof error === 'object') {
+      try {
+        errorText = `: ${JSON.stringify(error, null, 2)}`;
+      } catch {
+        errorText = `: ${Object.prototype.toString.call(error)}`;
+      }
+    } else {
+      errorText = `: ${String(error)}`;
+    }
+  }
+  
   console.error(`[${timestamp}] ${message}${errorText}`);
 }
 
@@ -292,7 +311,7 @@ async function main() {
       if (appointmentsAvailable) await notifyAllUsers();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      logError('Error in main loop:', error);
+      logError('Error in main loop', error);
       
       // Clean up any dangling Chrome processes after failure
       await killDanglingChromeProcesses();
@@ -310,7 +329,7 @@ async function main() {
 }
 
 main().catch(async (error) => {
-  logError('Critical error in main function:', error);
+  logError('Critical error in main function', error);
   const errorMessage = error instanceof Error ? error.message : String(error);
   await notifyError(`Critical error: ${errorMessage}`);
   process.exit(1);
