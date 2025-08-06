@@ -12,7 +12,7 @@ const {
   SCRAPE_INTERVAL_MINUTES = '10',
   PAGE_TIMEOUT_MS = '60000',
   HEADLESS = 'true',
-  PUPPETEER_EXECUTABLE_PATH = '/usr/bin/chromium-browser',
+  PUPPETEER_EXECUTABLE_PATH = '/usr/bin/google-chrome-stable',
 } = process.env;
 
 if (!TELEGRAM_BOT_TOKEN || !USERS_JSON) {
@@ -93,26 +93,72 @@ async function killDanglingChromeProcesses() {
   try {
     log('Checking for dangling Chrome processes...');
     
-    // Kill Chrome processes
-    const chromeCommands = [
-      'pkill -f chromium-browser',
-      'pkill -f chrome',
-      'pkill -f google-chrome',
+    // Kill Chrome processes directly without complex bash scripts
+    const commands = [
+      'pkill -TERM -f chrome',
+      'pkill -TERM -f chrome_crashpad',
     ];
     
-    for (const cmd of chromeCommands) {
+    // Graceful termination
+    for (const cmd of commands) {
       try {
         await execAsync(cmd);
+        log(`Executed: ${cmd}`);
       } catch (error) {
         // pkill returns exit code 1 if no processes found, which is normal
-        // Error: ${error instanceof Error ? error.message : String(error)}
+        log(`Command ${cmd} returned: ${error}`);
       }
     }
+    
+    // Wait for graceful termination
+    await new Promise(resolve => setTimeout(resolve, 2000));
     
     log('Chrome process cleanup completed');
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logError('Error during Chrome process cleanup:', errorMessage);
+  }
+}
+
+async function cleanupZombieProcesses() {
+  try {
+    log('Cleaning up zombie processes...');
+    
+    // Get list of zombie processes
+    const { stdout: psOutput } = await execAsync('ps aux');
+    const lines = psOutput.split('\n');
+    
+    const zombiePids: string[] = [];
+    
+    for (const line of lines) {
+      const parts = line.trim().split(/\s+/);
+      if (parts.length >= 8) {
+        const status = parts[7];
+        const pid = parts[1];
+        
+        // Check for zombie status (Z) or defunct processes
+        if (status === 'Z' || line.includes('<defunct>')) {
+          if (pid) {
+            zombiePids.push(pid);
+          }
+        }
+      }
+    }
+    
+    // Kill zombie processes
+    for (const pid of zombiePids) {
+      try {
+        await execAsync(`kill -KILL ${pid}`);
+        log(`Killed zombie process ${pid}`);
+      } catch (error) {
+        // Process may already be gone
+      }
+    }
+    
+    log('Zombie process cleanup completed');
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logError('Error during zombie process cleanup:', errorMessage);
   }
 }
 
@@ -140,9 +186,7 @@ async function sendTelegramNotification(message: string, chatId: string) {
 
 async function checkAppointments(): Promise<boolean> {
   log('Starting appointment check...');
-
   log('Launching browser...');
-  
   let browser;
   try {
     browser = await puppeteer.launch({
@@ -162,7 +206,27 @@ async function checkAppointments(): Promise<boolean> {
     });
     log('Browser launched successfully');
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
+    let errorMessage = 'Unknown error';
+    
+    logError(`Error type: ${typeof error}`);
+    logError(`Error constructor: ${error?.constructor?.name || 'unknown'}`);
+    logError(`Is Error instance: ${error instanceof Error}`);
+    
+    if (error instanceof Error) {
+      errorMessage = error.message;
+      if (error.stack) {
+        logError('Browser launch stack trace:', error.stack);
+      }
+    } else if (typeof error === 'object' && error !== null) {
+      try {
+        errorMessage = JSON.stringify(error);
+      } catch {
+        errorMessage = Object.prototype.toString.call(error);
+      }
+    } else {
+      errorMessage = String(error);
+    }
+    
     logError(`Failed to launch browser: ${errorMessage}`);
     throw error;
   }
@@ -227,7 +291,31 @@ async function checkAppointments(): Promise<boolean> {
     logError('Error during scraping:', errorMessage);
     return false;
   } finally {
-    await browser.close();
+    log('Entering finally block for browser cleanup...');
+    try {
+      if (browser) {
+        log('Attempting to close browser...');
+        await browser.close();
+        log('Browser closed successfully');
+      } else {
+        log('No browser instance to close');
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      logError('Error closing browser:', errorMessage);
+      
+      // Try to force close the browser if normal close fails
+      try {
+        if (browser) {
+          log('Attempting to force close browser...');
+          await browser.disconnect();
+          log('Browser force closed successfully');
+        }
+      } catch (forceCloseError) {
+        const forceErrorMessage = forceCloseError instanceof Error ? forceCloseError.message : String(forceCloseError);
+        logError('Error force closing browser:', forceErrorMessage);
+      }
+    }
   }
 }
 
@@ -305,6 +393,7 @@ async function main() {
   // Send startup notification to all users
   await notifyStartup();
 
+  let iterationCount = 0;
   while (true) {
     try {
       const appointmentsAvailable = await checkAppointments();
@@ -315,8 +404,18 @@ async function main() {
       
       // Clean up any dangling Chrome processes after failure
       await killDanglingChromeProcesses();
+      await cleanupZombieProcesses();
       
       await notifyError(errorMessage);
+    }
+    
+    iterationCount++;
+    
+    // Clean up processes every 10 iterations to prevent zombie accumulation
+    if (iterationCount % 10 === 0) {
+      log('Performing periodic process cleanup...');
+      await killDanglingChromeProcesses();
+      await cleanupZombieProcesses();
     }
     
     // Always wait for a randomized interval before the next check
@@ -327,6 +426,32 @@ async function main() {
     await new Promise((resolve) => setTimeout(resolve, interval));
   }
 }
+
+// Set up signal handlers for graceful shutdown
+process.on('SIGTERM', async () => {
+  log('Received SIGTERM, shutting down gracefully...');
+  await killDanglingChromeProcesses();
+  await cleanupZombieProcesses();
+  process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+  log('Received SIGINT, shutting down gracefully...');
+  await killDanglingChromeProcesses();
+  await cleanupZombieProcesses();
+  process.exit(0);
+});
+
+process.on('exit', async (code) => {
+  log(`Process exiting with code ${code}`);
+  // Note: async operations in exit handler may not complete
+  try {
+    await killDanglingChromeProcesses();
+    await cleanupZombieProcesses();
+  } catch (error) {
+    // Ignore errors during exit
+  }
+});
 
 main().catch(async (error) => {
   logError('Critical error in main function', error);

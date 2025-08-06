@@ -7,7 +7,7 @@ if swapon --show | grep -q '/swapfile'; then
 fi
 
 # Create swap file
-sudo fallocate -l 2G /swapfile
+sudo fallocate -l 3G /swapfile
 sudo chmod 600 /swapfile
 sudo mkswap /swapfile
 sudo swapon /swapfile
